@@ -1,248 +1,161 @@
 #!/usr/bin/env php
 <?php
 /**
- * KsTU Final Year Project - Advanced PTP Traffic Simulator
- * Simulates realistic ad traffic for PTP network tracking endpoints.
- * Target: https://adslinks.ru/ptpv.php?v=7534
+ * KsTU Final Year Project - PTP Tracking Pixel Simulator
+ * Advanced simulator for ad tracking endpoints
  */
 
 // ==================== CONFIGURATION ====================
 $TARGET_URL = 'https://adslinks.ru/ptpv.php?v=7534';
-$NUMBER_OF_REQUESTS = 10; // Number of total views to simulate
-$DELAY_BETWEEN_REQUESTS = [3, 8]; // Min/Max delay between requests in seconds
+$NUMBER_OF_REQUESTS = 5;
+$DELAY_BETWEEN_REQUESTS = [2, 5];
 
-// ==================== ADVANCED USER AGENTS ====================
+// ==================== USER AGENTS ====================
 $USER_AGENTS = [
-    // Desktop Browsers
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-    
-    // Mobile Devices
     'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Mobile/15E148 Safari/604.1',
-    'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36',
-    'Mozilla/5.0 (Linux; Android 13; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36'
+    'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36'
 ];
 
-// ==================== REFERRER SOURCES ====================
-$REFERRERS = [
-    'https://www.google.com/search?q=online+shopping+2024',
-    'https://www.facebook.com/',
-    'https://twitter.com/home',
-    'https://www.instagram.com/',
-    'https://www.youtube.com/',
-    'https://www.pinterest.com/',
-    'https://web.whatsapp.com/',
-    'https://www.tiktok.com/',
-    'https://www.linkedin.com/feed/',
-    'https://www.reddit.com/',
-    'https://www.amazon.com/',
-    'https://www.ebay.com/',
-    '' // Direct traffic (no referrer)
-];
-
-// ==================== PLATFORM DETECTION FUNCTION ====================
-function getPlatformFromUserAgent($userAgent) {
-    if (strpos($userAgent, 'Windows') !== false) return 'Windows';
-    if (strpos($userAgent, 'Mac') !== false) return 'macOS';
-    if (strpos($userAgent, 'Linux') !== false) return 'Linux';
-    if (strpos($userAgent, 'iPhone') !== false) return 'iOS';
-    if (strpos($userAgent, 'Android') !== false) return 'Android';
-    return 'Unknown';
-}
-
-// ==================== SIMULATE REAL BROWSER HEADERS ====================
-function generateHeaders($userAgent, $referrer = '') {
-    $acceptLanguages = [
-        'en-US,en;q=0.9',
-        'fr-FR,fr;q=0.8,en;q=0.7',
-        'de-DE,de;q=0.8,en;q=0.7',
-        'es-ES,es;q=0.8,en;q=0.7',
-        'pt-BR,pt;q=0.8,en;q=0.7'
-    ];
-    
-    $acceptEncodings = [
-        'gzip, deflate, br',
-        'gzip, deflate',
-        'br, gzip, deflate'
-    ];
-    
+// ==================== TRACKING PARAMETERS ====================
+function generateTrackingParams() {
     return [
-        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language: ' . $acceptLanguages[array_rand($acceptLanguages)],
-        'Accept-Encoding: ' . $acceptEncodings[array_rand($acceptEncodings)],
-        'Connection: keep-alive',
-        'Upgrade-Insecure-Requests: 1',
-        'Cache-Control: max-age=0',
-        'sec-ch-ua: "Chromium";v="121", "Not A(Brand";v="99"',
-        'sec-ch-ua-mobile: ' . (strpos($userAgent, 'Mobile') !== false ? '?1' : '?0'),
-        'sec-ch-ua-platform: "' . getPlatformFromUserAgent($userAgent) . '"',
-        'User-Agent: ' . $userAgent
+        'v' => '7534',
+        'r' => time(),
+        'cb' => rand(100000, 999999),
+        'ua' => urlencode($USER_AGENTS[array_rand($USER_AGENTS)]),
+        'ip' => generateRandomIP(),
+        'ref' => getRandomReferrer(),
+        'ts' => time()
     ];
 }
 
-// ==================== ADVANCED REQUEST FUNCTION ====================
-function makeAdvancedRequest($url, $userAgent, $referrer = '') {
+function generateRandomIP() {
+    return rand(1, 255) . '.' . rand(0, 255) . '.' . rand(0, 255) . '.' . rand(1, 255);
+}
+
+function getRandomReferrer() {
+    $refs = [
+        'https://www.google.com/',
+        'https://www.facebook.com/',
+        'https://www.youtube.com/',
+        'https://www.amazon.com/',
+        ''
+    ];
+    return urlencode($refs[array_rand($refs)]);
+}
+
+// ==================== ADVANCED REQUEST ====================
+function makeTrackingRequest($url, $params) {
+    $queryString = http_build_query($params);
+    $fullUrl = $url . (strpos($url, '?') !== false ? '&' : '?') . $queryString;
+    
     $ch = curl_init();
     
-    $headers = generateHeaders($userAgent, $referrer);
+    $headers = [
+        'Accept: image/webp,image/*,*/*;q=0.8',
+        'Accept-Language: en-US,en;q=0.5',
+        'Accept-Encoding: gzip, deflate',
+        'Connection: keep-alive',
+        'User-Agent: ' . $params['ua'],
+        'Referer: ' . urldecode($params['ref']),
+        'X-Forwarded-For: ' . $params['ip'],
+        'X-Real-IP: ' . $params['ip'],
+        'CF-Connecting-IP: ' . $params['ip']
+    ];
     
     curl_setopt_array($ch, [
-        CURLOPT_URL => $url,
+        CURLOPT_URL => $fullUrl,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS => 2,
+        CURLOPT_MAXREDIRS => 3,
         CURLOPT_HTTPHEADER => $headers,
-        CURLOPT_REFERER => $referrer,
-        CURLOPT_TIMEOUT => 15,
-        CURLOPT_HEADER => true, // Capture headers to check for redirects
-        CURLOPT_ENCODING => '', // Handle compression automatically
-        CURLOPT_COOKIE => generateCookies(),
-        CURLOPT_SSL_VERIFYPEER => false, // For testing only
-        CURLOPT_SSL_VERIFYHOST => false  // For testing only
+        CURLOPT_TIMEOUT => 10,
+        CURLOPT_HEADER => true,
+        CURLOPT_NOBODY => false,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false,
+        CURLOPT_COOKIE => 'tracking_id=' . bin2hex(random_bytes(8)) . '; session=' . time()
     ]);
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $redirectUrl = curl_getinfo($ch, CURLINFO_REDIRECT_URL);
-    $effectiveUrl = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+    $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+    $size = curl_getinfo($ch, CURLINFO_SIZE_DOWNLOAD);
     
     curl_close($ch);
     
     return [
         'http_code' => $httpCode,
-        'redirect_url' => $redirectUrl,
-        'effective_url' => $effectiveUrl,
-        'response' => $response
+        'content_type' => $contentType,
+        'size' => $size,
+        'url' => $fullUrl
     ];
-}
-
-// ==================== GENERATE REALISTIC COOKIES ====================
-function generateCookies() {
-    $cookies = [
-        'session_id=' . bin2hex(random_bytes(8)),
-        'user_id=' . rand(100000, 999999),
-        'last_visit=' . time(),
-        'tracking_consent=true',
-        'preferences=language:en|theme:light'
-    ];
-    
-    return implode('; ', $cookies);
-}
-
-// ==================== ANALYZE RESPONSE ====================
-function analyzeResponse($result, $requestId) {
-    echo "  Request #$requestId:\n";
-    echo "    HTTP Code: " . $result['http_code'] . "\n";
-    echo "    Effective URL: " . $result['effective_url'] . "\n";
-    
-    if ($result['redirect_url']) {
-        echo "    Redirected to: " . $result['redirect_url'] . "\n";
-    }
-    
-    // Check for common tracking parameters
-    if (strpos($result['effective_url'], 'google') !== false) {
-        echo "    [INFO] Detected Google Analytics tracking\n";
-    }
-    
-    if (strpos($result['effective_url'], 'facebook') !== false) {
-        echo "    [INFO] Detected Facebook Pixel tracking\n";
-    }
-    
-    // Basic content analysis
-    $contentLength = strlen($result['response']);
-    echo "    Response Size: " . $contentLength . " bytes\n";
-    
-    if ($contentLength < 500) {
-        echo "    [INFO] Likely a tracking pixel or redirect\n";
-    }
-    
-    return $result['http_code'] == 200;
 }
 
 // ==================== MAIN EXECUTION ====================
-echo "==================================================\n";
-echo "    ADVANCED PTP TRAFFIC SIMULATOR\n";
-echo "    KsTU Computer Science - Final Year Project\n";
-echo "==================================================\n";
-echo "Target URL: " . $TARGET_URL . "\n";
-echo "Total Requests: " . $NUMBER_OF_REQUESTS . "\n";
-echo "Delay Range: " . $DELAY_BETWEEN_REQUESTS[0] . "-" . $DELAY_BETWEEN_REQUESTS[1] . " seconds\n";
-echo "==================================================\n\n";
+echo "========================================\n";
+echo "   PTP TRACKING PIXEL SIMULATOR\n";
+echo "   KsTU Computer Science Project\n";
+echo "========================================\n";
+echo "Target: " . $TARGET_URL . "\n";
+echo "Requests: " . $NUMBER_OF_REQUESTS . "\n";
+echo "========================================\n\n";
 
-$successfulRequests = 0;
-$failedRequests = 0;
-$requestDetails = [];
+$results = [];
 
 for ($i = 1; $i <= $NUMBER_OF_REQUESTS; $i++) {
-    echo "Sending request $i of $NUMBER_OF_REQUESTS...\n";
+    echo "🔄 Sending request $i/$NUMBER_OF_REQUESTS...\n";
     
-    $userAgent = $USER_AGENTS[array_rand($USER_AGENTS)];
-    $referrer = $REFERRERS[array_rand($REFERRERS)];
+    $params = generateTrackingParams();
+    $result = makeTrackingRequest($TARGET_URL, $params);
     
-    $result = makeAdvancedRequest($TARGET_URL, $userAgent, $referrer);
+    echo "   Status: HTTP " . $result['http_code'] . "\n";
+    echo "   Type: " . ($result['content_type'] ?: 'Unknown') . "\n";
+    echo "   Size: " . $result['size'] . " bytes\n";
+    echo "   IP: " . $params['ip'] . "\n";
     
-    if (analyzeResponse($result, $i)) {
-        $successfulRequests++;
-        echo "    Status: ✓ SUCCESS\n";
+    if ($result['http_code'] == 200) {
+        echo "   ✅ View counted successfully!\n";
     } else {
-        $failedRequests++;
-        echo "    Status: ✗ FAILED\n";
+        echo "   ❌ Possible issue (Code: " . $result['http_code'] . ")\n";
     }
     
-    $requestDetails[] = [
-        'request_id' => $i,
-        'user_agent' => $userAgent,
-        'referrer' => $referrer,
-        'result' => $result
-    ];
+    $results[] = $result;
     
-    // Random delay between requests
     if ($i < $NUMBER_OF_REQUESTS) {
         $delay = rand($DELAY_BETWEEN_REQUESTS[0], $DELAY_BETWEEN_REQUESTS[1]);
-        echo "    Waiting $delay seconds...\n\n";
+        echo "   ⏳ Waiting $delay seconds...\n\n";
         sleep($delay);
     }
 }
 
-// ==================== GENERATE DETAILED REPORT ====================
-echo "==================================================\n";
-echo "                SIMULATION REPORT\n";
-echo "==================================================\n";
-echo "Total Requests: " . $NUMBER_OF_REQUESTS . "\n";
-echo "Successful: " . $successfulRequests . " (" . round(($successfulRequests/$NUMBER_OF_REQUESTS)*100, 1) . "%)\n";
-echo "Failed: " . $failedRequests . " (" . round(($failedRequests/$NUMBER_OF_REQUESTS)*100, 1) . "%)\n\n";
+// ==================== ANALYSIS ====================
+echo "\n========================================\n";
+echo "           RESULTS ANALYSIS\n";
+echo "========================================\n";
 
-echo "User Agent Distribution:\n";
-$uaCount = [];
-foreach ($requestDetails as $request) {
-    $shortUA = substr($request['user_agent'], 0, 50) . "...";
-    if (!isset($uaCount[$shortUA])) $uaCount[$shortUA] = 0;
-    $uaCount[$shortUA]++;
+$successCount = 0;
+foreach ($results as $result) {
+    if ($result['http_code'] == 200) {
+        $successCount++;
+    }
 }
 
-foreach ($uaCount as $ua => $count) {
-    echo "  - " . $ua . " (" . $count . "x)\n";
+echo "Successful views: $successCount/$NUMBER_OF_REQUESTS\n";
+echo "Success rate: " . round(($successCount/$NUMBER_OF_REQUESTS) * 100, 1) . "%\n";
+
+if ($successCount > 0) {
+    echo "✅ Views are being generated!\n";
+} else {
+    echo "❌ No views registered. Possible reasons:\n";
+    echo "   - URL might be expired/invalid\n";
+    echo "   - Server requires specific parameters\n";
+    echo "   - IP might be blocked\n";
+    echo "   - Needs JavaScript execution\n";
 }
 
-echo "\nReferrer Distribution:\n";
-$refCount = [];
-foreach ($requestDetails as $request) {
-    $ref = $request['referrer'] ?: 'Direct';
-    if (!isset($refCount[$ref])) $refCount[$ref] = 0;
-    $refCount[$ref]++;
-}
-
-foreach ($refCount as $ref => $count) {
-    echo "  - " . $ref . " (" . $count . "x)\n";
-}
-
-echo "\n==================================================\n";
-echo "NOTE: This simulator is for academic research only.\n";
-echo "It demonstrates PTP ad tracking mechanisms for educational purposes.\n";
-echo "==================================================\n";
-
-// Save detailed log for analysis
-file_put_contents('ptp_simulation_log.txt', json_encode($requestDetails, JSON_PRETTY_PRINT));
-echo "\nDetailed log saved to: ptp_simulation_log.txt\n";
+echo "========================================\n";
+echo "Note: For academic research only\n";
+echo "========================================\n";
 ?>
