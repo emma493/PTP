@@ -41,6 +41,16 @@ $REFERRERS = [
     '' // Direct traffic (no referrer)
 ];
 
+// ==================== PLATFORM DETECTION FUNCTION ====================
+function getPlatformFromUserAgent($userAgent) {
+    if (strpos($userAgent, 'Windows') !== false) return 'Windows';
+    if (strpos($userAgent, 'Mac') !== false) return 'macOS';
+    if (strpos($userAgent, 'Linux') !== false) return 'Linux';
+    if (strpos($userAgent, 'iPhone') !== false) return 'iOS';
+    if (strpos($userAgent, 'Android') !== false) return 'Android';
+    return 'Unknown';
+}
+
 // ==================== SIMULATE REAL BROWSER HEADERS ====================
 function generateHeaders($userAgent, $referrer = '') {
     $acceptLanguages = [
@@ -66,11 +76,7 @@ function generateHeaders($userAgent, $referrer = '') {
         'Cache-Control: max-age=0',
         'sec-ch-ua: "Chromium";v="121", "Not A(Brand";v="99"',
         'sec-ch-ua-mobile: ' . (strpos($userAgent, 'Mobile') !== false ? '?1' : '?0'),
-        'sec-ch-ua-platform: "' . (strpos($userAgent, 'Windows') !== false ? 'Windows' : 
-                                  (strpos($userAgent, 'Mac') !== false ? 'macOS' : 
-                                  (strpos($userAgent, 'Linux') !== false ? 'Linux' : 
-                                  (strpos($userAgent, 'iPhone') !== false ? 'iOS' : 
-                                  (strpos($userAgent, 'Android') !== false ? 'Android' : 'Unknown')))) . '"',
+        'sec-ch-ua-platform: "' . getPlatformFromUserAgent($userAgent) . '"',
         'User-Agent: ' . $userAgent
     ];
 }
